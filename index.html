@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0B2E2C">
+<title>Вместе, Краснодар</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #E9E3F5; height: 100%; }
+
+  .stage { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 30% 20%, #1a3a38, #0d1a19 70%); padding: 30px; }
+  .phone { width: 390px; height: 844px; background: #000; border-radius: 54px; padding: 14px; box-shadow: 0 40px 80px rgba(0,0,0,0.5); position: relative; }
+  .notch { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: 120px; height: 28px; background: #000; border-radius: 0 0 18px 18px; z-index: 50; }
+  .screen { width: 100%; height: 100%; background: #F5F2FB; border-radius: 40px; overflow: hidden; position: relative; }
+  @media (max-width: 480px) { .stage { padding: 0; } .phone { width: 100vw; height: 100vh; border-radius: 0; padding: 0; box-shadow: none; } .screen { border-radius: 0; } .notch { display: none; } }
+
+  .app { position: absolute; inset: 0; display: flex; flex-direction: column; }
+  .statusbar { height: env(safe-area-inset-top, 44px); flex-shrink: 0; }
+  .view { flex: 1; overflow-y: auto; display: none; -webkit-overflow-scrolling: touch; padding-bottom: 90px; }
+  .view.active { display: block; }
+
+  .hero-header { background: linear-gradient(135deg, #0E8A86, #17B3A8); padding: 20px 20px 22px 20px; color: #fff; border-radius: 0 0 26px 26px; }
+  .hero-header .greet { font-size: 13px; opacity: 0.85; margin-bottom: 2px; }
+  .hero-header h1 { font-size: 22px; font-weight: 800; margin-bottom: 14px; }
+  .search-pill { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35); border-radius: 14px; padding: 11px 14px; font-size: 14px; color: rgba(255,255,255,0.9); }
+
+  .chips { display: flex; gap: 8px; padding: 14px 16px 6px 16px; overflow-x: auto; }
+  .chip { flex-shrink: 0; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; background: #fff; color: #6B5A4C; border: 1px solid #E3D9E8; }
+  .chip.active { background: #0B2E2C; color: #fff; border-color: #0B2E2C; }
+
+  .section-title { font-size: 13px; font-weight: 800; color: #6B5A4C; letter-spacing: 0.5px; text-transform: uppercase; padding: 14px 16px 8px 16px; }
+  .card-list { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+  .venue-card { background: #fff; border-radius: 18px; padding: 12px; display: flex; gap: 12px; align-items: center; box-shadow: 0 2px 10px rgba(60,30,90,0.06); }
+  .venue-thumb { width: 56px; height: 56px; min-width: 56px; min-height: 56px; max-width: 56px; max-height: 56px; border-radius: 14px; flex-shrink: 0; flex-grow: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+  .venue-info { flex: 1; min-width: 0; }
+  .venue-name { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+  .venue-cat { font-size: 11.5px; color: #9C8CA6; margin-bottom: 4px; }
+  .venue-perk { font-size: 12.5px; font-weight: 700; color: #A63FE8; }
+  .chev { color: #C9BFD6; font-size: 20px; }
+
+  .tabbar { position: absolute; bottom: 0; left: 0; right: 0; height: 82px; background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); border-top: 1px solid #E8E1F0; display: flex; padding-bottom: max(18px, env(safe-area-inset-bottom)); z-index: 40; }
+  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #B3A6BF; font-size: 10.5px; font-weight: 700; }
+  .tab .ic { font-size: 21px; }
+  .tab.active { color: #0E8A86; }
+
+  .detail-hero { height: 190px; display: flex; align-items: flex-end; padding: 18px; position: relative; }
+  .back-btn { position: absolute; top: 18px; left: 16px; width: 34px; height: 34px; border-radius: 50%; background: rgba(0,0,0,0.28); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; z-index: 5; }
+  .detail-hero h2 { color: #fff; font-size: 22px; font-weight: 800; position: relative; z-index: 2; }
+  .detail-body { padding: 18px; }
+  .perk-box { background: #fff; border-radius: 18px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 10px rgba(60,30,90,0.06); }
+  .perk-box .lbl { font-size: 11.5px; color: #9C8CA6; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; margin-bottom: 4px; }
+  .perk-box .val { font-size: 18px; font-weight: 800; color: #0E8A86; }
+  .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #F0EAF5; font-size: 13.5px; }
+  .info-row span:first-child { color: #6B5A4C; }
+  .info-row span:last-child { font-weight: 700; }
+  .cta-btn { display: block; width: 100%; text-align: center; padding: 16px; border-radius: 16px; border: none; background: linear-gradient(135deg, #E619A6, #FFB300); color: #fff; font-size: 15.5px; font-weight: 800; margin-top: 6px; cursor: pointer; }
+  .cta-btn:disabled { opacity: 0.5; }
+  .cta-btn.secondary { background: #fff; color: #0E8A86; border: 1.5px solid #0E8A86; }
+
+  .redeem-wrap { padding: 24px 20px; text-align: center; }
+  .redeem-card { background: #fff; border-radius: 26px; padding: 26px 22px; box-shadow: 0 10px 30px rgba(60,30,90,0.12); }
+  .redeem-status { display: inline-block; background: #E8F8EC; color: #2C8F4A; font-size: 12px; font-weight: 800; padding: 5px 12px; border-radius: 20px; margin-bottom: 14px; }
+  .redeem-card h3 { font-size: 19px; font-weight: 800; margin-bottom: 4px; }
+  .redeem-card .sub { font-size: 13px; color: #9C8CA6; margin-bottom: 18px; }
+  #qr-canvas { display: flex; justify-content: center; margin-bottom: 18px; }
+  .redeem-perk { font-size: 22px; font-weight: 800; color: #0E8A86; margin-bottom: 4px; }
+  .redeem-note { font-size: 12px; color: #B3A6BF; }
+
+  .mycard-header { padding: 20px 16px 10px 16px; }
+  .mycard-header h1 { font-size: 22px; font-weight: 800; }
+  .sub-card { margin: 10px 16px; border-radius: 22px; padding: 22px; background: linear-gradient(135deg, #0E8A86, #E619A6); color: #fff; position: relative; overflow: hidden; }
+  .sub-card .tier { font-size: 12px; opacity: 0.85; margin-bottom: 4px; letter-spacing: 0.4px; }
+  .sub-card .status { font-size: 20px; font-weight: 800; margin-bottom: 14px; }
+  .sub-card .valid { font-size: 12.5px; opacity: 0.9; }
+  .plan-list { padding: 4px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .plan-item { background: #fff; border-radius: 14px; padding: 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(60,30,90,0.05); cursor: pointer; }
+  .plan-item .name { font-size: 14px; font-weight: 700; }
+  .plan-item .price { font-size: 14px; color: #0E8A86; font-weight: 800; }
+
+  .login-wrap { padding: 60px 24px; text-align: center; }
+  .login-wrap .logo { font-size: 26px; font-weight: 900; color: #0E8A86; margin-bottom: 6px; }
+  .login-wrap .sub { font-size: 13.5px; color: #6B5A4C; margin-bottom: 30px; }
+  .login-wrap input { width: 100%; padding: 15px; border-radius: 14px; border: 1.5px solid #E3D9E8; font-size: 16px; text-align: center; margin-bottom: 14px; }
+  .login-wrap .hint { font-size: 11.5px; color: #B3A6BF; margin-top: 14px; }
+
+  .pay-stub { padding: 24px 20px; text-align: center; }
+  .pay-stub .box { background: #fff; border-radius: 20px; padding: 24px; box-shadow: 0 4px 20px rgba(60,30,90,0.08); }
+  .pay-stub .amount { font-size: 32px; font-weight: 900; color: #0E8A86; margin: 10px 0; }
+  .pay-stub .note { font-size: 12.5px; color: #9C8CA6; line-height: 1.4; margin-bottom: 20px; }
+  .dev-badge { display: inline-block; background: #FFF4D6; color: #8A6A1F; font-size: 10.5px; font-weight: 800; padding: 4px 10px; border-radius: 10px; margin-bottom: 14px; }
+
+  .profile-header { padding: 22px 16px 6px 16px; display: flex; align-items: center; gap: 14px; flex: none !important; height: auto !important; max-height: 100px !important; flex-shrink: 0; }
+  .avatar { width: 54px; height: 54px; min-width: 54px; min-height: 54px; max-width: 54px; max-height: 54px; flex-shrink: 0; flex-grow: 0; border-radius: 50%; background: linear-gradient(135deg, #E619A6, #FFB300); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 20px; }
+  .profile-header .name { font-size: 17px; font-weight: 800; }
+  .profile-header .phone { font-size: 12px; color: #9C8CA6; }
+  .menu-list { padding: 6px 16px; display: flex; flex-direction: column; gap: 8px; flex: none !important; height: auto !important; }
+  .menu-item { background: #fff; border-radius: 14px; padding: 14px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(60,30,90,0.05); }
+  .menu-item .t { flex: 1; font-size: 14px; font-weight: 600; }
+
+  .loading { text-align: center; padding: 60px 20px; color: #9C8CA6; font-size: 13px; }
+  .verify-wrap { padding: 60px 24px; text-align: center; }
+  .verify-ok { background: #E8F8EC; color: #2C8F4A; border-radius: 20px; padding: 30px; }
+  .verify-fail { background: #FDEAEA; color: #D2456B; border-radius: 20px; padding: 30px; }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+      <div class="app" id="app-root">
+        <div class="loading">Загрузка…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= КОНФИГ SUPABASE ================= */
+const SUPABASE_URL = 'https://oduwgsoooeealscwuazl.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kdXdnc29vb2VlYWxzY3d1YXpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxOTI3OTUsImV4cCI6MjEwMzc2ODc5NX0.VgI5pDn-tRK3vEna3h7OXYUEKzRoPe8m1Ch7PMEAjKA';
+
+/* ================= ПЛАТЁЖНЫЙ ШЛЮЗ (заглушка до подключения ЮKassa) =================
+   Когда получишь API-ключи ЮKassa — здесь появится реальный редирект
+   на страницу оплаты вместо кнопки "симулировать оплату". */
+const PAYMENTS_LIVE = false;
+
+const H = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' };
+const api = (path) => `${SUPABASE_URL}/rest/v1/${path}`;
+
+async function sbSelect(table, query = '') {
+  const res = await fetch(api(`${table}?${query}`), { headers: H });
+  if (!res.ok) throw new Error(`Supabase select ${table}: ${res.status}`);
+  return res.json();
+}
+async function sbInsert(table, row) {
+  const res = await fetch(api(table), { method: 'POST', headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(row) });
+  if (!res.ok) throw new Error(`Supabase insert ${table}: ${res.status}`);
+  return res.json();
+}
+async function sbUpdate(table, query, patch) {
+  const res = await fetch(api(`${table}?${query}`), { method: 'PATCH', headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(patch) });
+  if (!res.ok) throw new Error(`Supabase update ${table}: ${res.status}`);
+  return res.json();
+}
+
+/* ================= СОСТОЯНИЕ ================= */
+let subscriber = null;      // { id, phone, name }
+let partners = [];
+let plans = [];
+let currentFilter = 'all';
+let currentVenue = null;
+let activeSubscription = null;
+
+function saveLocalSubscriber(s) { localStorage.setItem('vk_subscriber', JSON.stringify(s)); }
+function loadLocalSubscriber() { try { return JSON.parse(localStorage.getItem('vk_subscriber')); } catch (e) { return null; } }
+
+/* ================= ВЕРИФИКАЦИЯ QR (для персонала партнёра) =================
+   Если ссылка открыта как index.html?verify=ТОКЕН — показываем экран проверки
+   вместо обычного приложения. Так партнёр может отсканировать QR любым
+   сканером и сразу увидеть, действительна ли привилегия. */
+async function checkVerifyMode() {
+  const params = new URLSearchParams(location.search);
+  const token = params.get('verify');
+  if (!token) return false;
+
+  const root = document.getElementById('app-root');
+  root.innerHTML = '<div class="loading">Проверка…</div>';
+  try {
+    const rows = await sbSelect('vk_redemptions', `token=eq.${encodeURIComponent(token)}&select=redeemed_at,vk_partners(name,perk),vk_subscribers(phone,name)`);
+    if (!rows.length) {
+      root.innerHTML = `<div class="verify-wrap"><div class="verify-fail"><h2>Не найдено</h2><p>Такой код не зарегистрирован в системе.</p></div></div>`;
+      return true;
+    }
+    const r = rows[0];
+    const when = new Date(r.redeemed_at).toLocaleString('ru-RU');
+    root.innerHTML = `
+      <div class="verify-wrap">
+        <div class="verify-ok">
+          <h2>✓ Действительно</h2>
+          <p style="margin-top:10px; font-weight:800;">${r.vk_partners.name}</p>
+          <p>${r.vk_partners.perk}</p>
+          <p style="margin-top:10px; font-size:12px; opacity:0.8;">Выдано: ${when}</p>
+        </div>
+      </div>`;
+  } catch (e) {
+    root.innerHTML = `<div class="verify-wrap"><div class="verify-fail"><h2>Ошибка проверки</h2><p>${e.message}</p></div></div>`;
+  }
+  return true;
+}
+
+/* ================= ЗАГРУЗКА ДАННЫХ ================= */
+async function loadCatalog() {
+  [partners, plans] = await Promise.all([
+    sbSelect('vk_partners', 'active=eq.true&order=id.asc'),
+    sbSelect('vk_plans', 'active=eq.true&order=duration_months.asc'),
+  ]);
+}
+
+async function loadActiveSubscription() {
+  if (!subscriber) return;
+  const rows = await sbSelect('vk_subscriptions',
+    `subscriber_id=eq.${subscriber.id}&status=eq.active&order=expires_at.desc&limit=1&select=*,vk_plans(name)`);
+  activeSubscription = rows[0] || null;
+}
+
+/* ================= ВХОД ПО ТЕЛЕФОНУ (упрощённый, без SMS — см. schema.sql) ================= */
+function renderLogin() {
+  const root = document.getElementById('app-root');
+  root.innerHTML = `
+    <div class="view active">
+      <div class="login-wrap">
+        <img src="assets/logo-dark.png" alt="Вместе, Краснодар" style="height:52px; display:block; margin:0 auto 6px auto;">
+        <div class="sub">Введите номер телефона, чтобы войти или зарегистрироваться</div>
+        <input type="tel" id="phone-input" placeholder="+7 900 000-00-00">
+        <button class="cta-btn" onclick="doLogin()">Продолжить</button>
+        <div class="hint">Пилотная версия: вход только по номеру, без SMS-кода.</div>
+      </div>
+    </div>`;
+}
+
+async function doLogin() {
+  const input = document.getElementById('phone-input');
+  const phone = input.value.trim();
+  if (!phone || phone.length < 10) { alert('Введите корректный номер телефона'); return; }
+  try {
+    let existing = await sbSelect('vk_subscribers', `phone=eq.${encodeURIComponent(phone)}`);
+    let s;
+    if (existing.length) {
+      s = existing[0];
+    } else {
+      const created = await sbInsert('vk_subscribers', { phone });
+      s = created[0];
+    }
+    subscriber = s;
+    saveLocalSubscriber(s);
+    await bootApp();
+  } catch (e) {
+    alert('Не удалось войти: ' + e.message);
+  }
+}
+
+/* ================= ОСНОВНОЕ ПРИЛОЖЕНИЕ ================= */
+function renderApp() {
+  const root = document.getElementById('app-root');
+  root.innerHTML = `
+    <div class="statusbar"></div>
+
+    <div class="view active" id="view-catalog">
+      <div class="hero-header">
+        <img src="assets/logo-white.png" alt="Вместе, Краснодар" style="height:26px; display:block; margin-bottom:10px;">
+        <div class="greet">Привет 👋</div>
+        <h1>Куда сегодня?</h1>
+        <div class="search-pill">🔍 Поиск заведений и услуг</div>
+      </div>
+      <div class="chips" id="chips">
+        <div class="chip active" data-cat="all">Все</div>
+        <div class="chip" data-cat="food">Общепит</div>
+        <div class="chip" data-cat="beauty">Красота</div>
+        <div class="chip" data-cat="fit">Фитнес</div>
+        <div class="chip" data-cat="wear">Одежда</div>
+      </div>
+      <div class="section-title">Партнёры рядом</div>
+      <div class="card-list" id="venue-list"></div>
+    </div>
+
+    <div class="view" id="view-detail">
+      <div class="detail-hero" id="detail-hero-bg" style="background:linear-gradient(135deg,#0E8A86,#E619A6);">
+        <div class="back-btn" onclick="showView('catalog')">←</div>
+        <h2 id="detail-name">Название</h2>
+      </div>
+      <div class="detail-body">
+        <div class="perk-box"><div class="lbl">Ваша привилегия</div><div class="val" id="detail-perk">-</div></div>
+        <div class="perk-box">
+          <div class="info-row"><span>Категория</span><span id="detail-cat">-</span></div>
+          <div class="info-row"><span>Адрес</span><span id="detail-addr">-</span></div>
+          <div class="info-row"><span>Часы действия</span><span id="detail-hours">-</span></div>
+        </div>
+        <button class="cta-btn" id="detail-redeem-btn" onclick="showRedeem()">Показать привилегию</button>
+      </div>
+    </div>
+
+    <div class="view" id="view-redeem">
+      <div class="redeem-wrap">
+        <div class="back-btn" style="position:static; display:inline-flex; margin-bottom:16px; background:#EFE8F5; color:#6B5A4C;" onclick="showView('detail')">←</div>
+        <div class="redeem-card">
+          <div class="redeem-status">✓ Подписка активна</div>
+          <h3 id="redeem-name">Заведение</h3>
+          <div class="sub">Покажите экран администратору</div>
+          <div id="qr-canvas"></div>
+          <div class="redeem-perk" id="redeem-perk">-</div>
+          <div class="redeem-note">Уникальный код, действителен для одного применения</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-mycard">
+      <div class="mycard-header"><h1>Моя карта</h1></div>
+      <div id="mycard-status-wrap"></div>
+      <div class="section-title">Тарифы</div>
+      <div class="plan-list" id="plan-list"></div>
+    </div>
+
+    <div class="view" id="view-pay">
+      <div class="pay-stub">
+        <div class="back-btn" style="position:static; display:inline-flex; margin-bottom:16px; background:#EFE8F5; color:#6B5A4C;" onclick="showView('mycard')">←</div>
+        <div class="box">
+          <div class="dev-badge">ТЕСТОВЫЙ РЕЖИМ</div>
+          <div style="font-size:13px; color:#6B5A4C;">Тариф</div>
+          <div style="font-size:18px; font-weight:800;" id="pay-plan-name">-</div>
+          <div class="amount" id="pay-amount">0 ₽</div>
+          <div class="note">Ключи ЮKassa ещё не подключены. Сейчас можно только проверить весь путь целиком — реальное списание не происходит.</div>
+          <button class="cta-btn" onclick="simulatePayment()">Симулировать успешную оплату</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-profile">
+      <div class="profile-header">
+        <div class="avatar" id="avatar-letter">?</div>
+        <div><div class="name" id="profile-phone">-</div><div class="phone">Подписчик</div></div>
+      </div>
+      <div class="menu-list">
+        <div class="menu-item"><span class="t">История посещений</span></div>
+        <div class="menu-item"><span class="t">История платежей</span></div>
+        <div class="menu-item" onclick="logout()"><span class="t" style="color:#D2456B;">Выйти</span></div>
+      </div>
+    </div>
+
+    <div class="tabbar">
+      <div class="tab active" data-tab="catalog" onclick="switchTab('catalog')"><span class="ic">🏠</span>Каталог</div>
+      <div class="tab" data-tab="mycard" onclick="switchTab('mycard')"><span class="ic">🎫</span>Моя карта</div>
+      <div class="tab" data-tab="profile" onclick="switchTab('profile')"><span class="ic">👤</span>Профиль</div>
+    </div>
+  `;
+
+  document.getElementById('chips').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    document.querySelectorAll('.chip').forEach((c) => c.classList.remove('active'));
+    chip.classList.add('active');
+    renderVenues(chip.dataset.cat);
+  });
+
+  renderVenues('all');
+  renderMyCard();
+  renderPlans();
+  document.getElementById('profile-phone').textContent = subscriber.phone;
+  document.getElementById('avatar-letter').textContent = subscriber.phone.replace(/\D/g, '').slice(-2);
+}
+
+function renderVenues(filter) {
+  currentFilter = filter;
+  const list = document.getElementById('venue-list');
+  list.innerHTML = '';
+  partners.filter((p) => filter === 'all' || p.category === filter).forEach((p) => {
+    const el = document.createElement('div');
+    el.className = 'venue-card';
+    el.onclick = () => openDetail(p.id);
+    el.innerHTML = `
+      <div class="venue-thumb" style="background:${p.color || '#eee'}">${p.icon || '⭐'}</div>
+      <div class="venue-info">
+        <div class="venue-name">${p.name}</div>
+        <div class="venue-cat">${catLabel(p.category)}</div>
+        <div class="venue-perk">${p.perk}</div>
+      </div>
+      <div class="chev">›</div>`;
+    list.appendChild(el);
+  });
+}
+function catLabel(c) { return { food: 'Общепит', beauty: 'Красота', fit: 'Фитнес', wear: 'Одежда' }[c] || c; }
+
+function openDetail(id) {
+  currentVenue = partners.find((p) => p.id === id);
+  document.getElementById('detail-name').textContent = currentVenue.name;
+  document.getElementById('detail-perk').textContent = currentVenue.perk;
+  document.getElementById('detail-cat').textContent = catLabel(currentVenue.category);
+  document.getElementById('detail-addr').textContent = currentVenue.address || '-';
+  document.getElementById('detail-hours').textContent = currentVenue.hours || '-';
+  const btn = document.getElementById('detail-redeem-btn');
+  if (!activeSubscription) {
+    btn.textContent = 'Нужна активная подписка';
+    btn.onclick = () => showView('mycard');
+  } else {
+    btn.textContent = 'Показать привилегию';
+    btn.onclick = showRedeem;
+  }
+  showView('detail');
+}
+
+async function showRedeem() {
+  if (!activeSubscription) { showView('mycard'); return; }
+  document.getElementById('redeem-name').textContent = currentVenue.name;
+  document.getElementById('redeem-perk').textContent = currentVenue.perk;
+  showView('redeem');
+
+  // Уникальный токен на каждое предъявление + запись в базу
+  const token = 'r_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  try {
+    await sbInsert('vk_redemptions', { subscriber_id: subscriber.id, partner_id: currentVenue.id, token });
+  } catch (e) {
+    console.error('Не удалось записать погашение:', e);
+  }
+  const qrEl = document.getElementById('qr-canvas');
+  qrEl.innerHTML = '';
+  const verifyUrl = `${location.origin}${location.pathname}?verify=${token}`;
+  new QRCode(qrEl, { text: verifyUrl, width: 180, height: 180, colorDark: '#0B2E2C', colorLight: '#ffffff' });
+}
+
+function renderMyCard() {
+  const wrap = document.getElementById('mycard-status-wrap');
+  if (activeSubscription) {
+    const until = new Date(activeSubscription.expires_at).toLocaleDateString('ru-RU');
+    wrap.innerHTML = `
+      <div class="sub-card">
+        <div class="tier">ТАРИФ · ${activeSubscription.vk_plans.name.toUpperCase()}</div>
+        <div class="status">Подписка активна</div>
+        <div class="valid">Действует до ${until}</div>
+      </div>`;
+  } else {
+    wrap.innerHTML = `
+      <div class="sub-card" style="background:linear-gradient(135deg,#9C8CA6,#6B5A4C);">
+        <div class="tier">СТАТУС</div>
+        <div class="status">Подписки пока нет</div>
+        <div class="valid">Выберите тариф ниже</div>
+      </div>`;
+  }
+}
+
+function renderPlans() {
+  const list = document.getElementById('plan-list');
+  list.innerHTML = '';
+  plans.forEach((p) => {
+    const el = document.createElement('div');
+    el.className = 'plan-item';
+    el.onclick = () => startCheckout(p);
+    el.innerHTML = `<span class="name">${p.name}</span><span class="price">${p.price_rub} ₽</span>`;
+    list.appendChild(el);
+  });
+}
+
+let checkoutPlan = null;
+let checkoutSubscriptionId = null;
+let checkoutPaymentId = null;
+
+async function startCheckout(plan) {
+  checkoutPlan = plan;
+  document.getElementById('pay-plan-name').textContent = plan.name;
+  document.getElementById('pay-amount').textContent = plan.price_rub + ' ₽';
+  showView('pay');
+  try {
+    const [sub] = await sbInsert('vk_subscriptions', { subscriber_id: subscriber.id, plan_id: plan.id, status: 'pending' });
+    const [pay] = await sbInsert('vk_payments', { subscriber_id: subscriber.id, plan_id: plan.id, amount_rub: plan.price_rub, status: 'pending' });
+    checkoutSubscriptionId = sub.id;
+    checkoutPaymentId = pay.id;
+  } catch (e) {
+    alert('Не удалось начать оформление: ' + e.message);
+  }
+}
+
+async function simulatePayment() {
+  if (!checkoutSubscriptionId) return;
+  const now = new Date();
+  const expires = new Date(now);
+  expires.setMonth(expires.getMonth() + checkoutPlan.duration_months);
+  try {
+    await sbUpdate('vk_payments', `id=eq.${checkoutPaymentId}`, { status: 'succeeded', paid_at: now.toISOString() });
+    await sbUpdate('vk_subscriptions', `id=eq.${checkoutSubscriptionId}`, {
+      status: 'active', starts_at: now.toISOString(), expires_at: expires.toISOString(),
+    });
+    await loadActiveSubscription();
+    renderMyCard();
+    switchTab('mycard');
+    alert('Подписка активирована (тестовый режим)');
+  } catch (e) {
+    alert('Ошибка: ' + e.message);
+  }
+}
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+}
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
+  document.querySelector(`.tab[data-tab="${name}"]`).classList.add('active');
+  showView(name);
+  if (name === 'profile') setTimeout(showProfileDiagnostics, 50);
+}
+function showProfileDiagnostics() {
+  const avatar = document.getElementById('avatar-letter');
+  const header = document.querySelector('.profile-header');
+  if (!avatar || !header) return;
+  const ar = avatar.getBoundingClientRect();
+  const hr = header.getBoundingClientRect();
+  const cs = getComputedStyle(avatar);
+  const msg =
+    'ДИАГНОСТИКА\n' +
+    'avatar rect: ' + Math.round(ar.width) + 'x' + Math.round(ar.height) + '\n' +
+    'avatar computed height: ' + cs.height + '\n' +
+    'avatar computed display: ' + cs.display + '\n' +
+    'avatar computed position: ' + cs.position + '\n' +
+    'header rect: ' + Math.round(hr.width) + 'x' + Math.round(hr.height) + '\n' +
+    'header computed display: ' + getComputedStyle(header).display + '\n' +
+    'window: ' + window.innerWidth + 'x' + window.innerHeight;
+  let box = document.getElementById('diag-box');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'diag-box';
+    box.style.cssText = 'position:fixed; top:50px; left:10px; right:10px; background:#000; color:#0f0; font-size:11px; padding:10px; z-index:9999; white-space:pre-wrap; border-radius:8px; font-family:monospace;';
+    document.body.appendChild(box);
+  }
+  box.textContent = msg;
+}
+function logout() {
+  localStorage.removeItem('vk_subscriber');
+  location.reload();
+}
+
+/* ================= СТАРТ ================= */
+async function bootApp() {
+  const root = document.getElementById('app-root');
+  root.innerHTML = '<div class="loading">Загрузка…</div>';
+  try {
+    await loadCatalog();
+    await loadActiveSubscription();
+    renderApp();
+  } catch (e) {
+    root.innerHTML = `<div class="loading">Ошибка загрузки: ${e.message}<br><br>Проверьте, что таблицы созданы в Supabase (schema.sql) и ключи верны.</div>`;
+  }
+}
+
+(async function init() {
+  if (await checkVerifyMode()) return;
+
+  subscriber = loadLocalSubscriber();
+  if (subscriber) {
+    await bootApp();
+  } else {
+    renderLogin();
+  }
+
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
