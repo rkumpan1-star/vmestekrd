@@ -87,6 +87,7 @@
 
   .login-wrap { padding: 60px 24px; text-align: center; }
   .login-wrap .logo { font-size: 26px; font-weight: 900; color: #0E8A86; margin-bottom: 6px; }
+  .brand-tagline { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #0E8A86; opacity: 0.7; text-align: center; margin-bottom: 22px; }
   .login-wrap .sub { font-size: 13.5px; color: #6B5A4C; margin-bottom: 30px; }
   .login-wrap input { width: 100%; padding: 15px; border-radius: 14px; border: 1.5px solid #E3D9E8; font-size: 16px; text-align: center; margin-bottom: 14px; }
   .login-wrap .hint { font-size: 11.5px; color: #B3A6BF; margin-top: 14px; }
@@ -99,8 +100,13 @@
 
   .profile-header { padding: 22px 16px 6px 16px; display: flex; align-items: center; gap: 14px; flex: none !important; height: auto !important; max-height: 100px !important; flex-shrink: 0; }
   .avatar { width: 54px; height: 54px; min-width: 54px; min-height: 54px; max-width: 54px; max-height: 54px; flex-shrink: 0; flex-grow: 0; border-radius: 50%; background: linear-gradient(135deg, #E619A6, #FFB300); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 20px; }
-  .profile-header .name { font-size: 17px; font-weight: 800; }
-  .profile-header .role-label { font-size: 12px; color: #9C8CA6; }
+  .profile-header-info { flex: 1; min-width: 0; }
+  .name-row { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .name-row .name { font-size: 17px; font-weight: 800; }
+  .name-row .name.placeholder { color: #B3A6BF; font-weight: 700; }
+  .name-row .edit-pencil { font-size: 13px; opacity: 0.6; }
+  .name-row input { font-size: 17px; font-weight: 800; border: none; border-bottom: 2px solid #0E8A86; outline: none; background: none; font-family: inherit; color: #22252A; width: 100%; padding: 0 0 2px 0; }
+  .profile-header .role-label { font-size: 12px; color: #9C8CA6; margin-top: 2px; }
   .menu-list { padding: 6px 16px; display: flex; flex-direction: column; gap: 8px; flex: none !important; height: auto !important; }
   .menu-item { background: #fff; border-radius: 14px; padding: 14px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(60,30,90,0.05); }
 
@@ -236,6 +242,7 @@ function renderLogin() {
     <div class="view active">
       <div class="login-wrap">
         <img src="assets/logo-dark.png" alt="Вместе, Краснодар" style="height:52px; display:block; margin:0 auto 6px auto;">
+        <div class="brand-tagline">Клуб городских привилегий</div>
         <div class="sub">Введите номер телефона, чтобы войти или зарегистрироваться</div>
         <input type="tel" id="phone-input" placeholder="+7 900 000-00-00">
         <button class="cta-btn" onclick="doLogin()">Продолжить</button>
@@ -344,7 +351,10 @@ function renderApp() {
     <div class="view" id="view-profile">
       <div class="profile-header">
         <div class="avatar" id="avatar-letter">?</div>
-        <div><div class="name" id="profile-phone">-</div><div class="role-label">Подписчик</div></div>
+        <div class="profile-header-info">
+          <div class="name-row" id="name-row"></div>
+          <div class="role-label" id="profile-phone-sub">-</div>
+        </div>
       </div>
 
       <div class="contribution-card" id="contribution-card">
@@ -380,8 +390,49 @@ function renderApp() {
   renderVenues('all');
   renderMyCard();
   renderPlans();
-  document.getElementById('profile-phone').textContent = subscriber.phone;
-  document.getElementById('avatar-letter').textContent = subscriber.phone.replace(/\D/g, '').slice(-2);
+  document.getElementById('profile-phone-sub').textContent = subscriber.phone;
+  renderNameDisplay();
+}
+
+function renderNameDisplay() {
+  const nameRow = document.getElementById('name-row');
+  const avatarEl = document.getElementById('avatar-letter');
+  if (!nameRow) return;
+  const hasName = subscriber.name && subscriber.name.trim();
+  nameRow.innerHTML = hasName
+    ? `<span class="name">${subscriber.name}</span><span class="edit-pencil">✏️</span>`
+    : `<span class="name placeholder">Добавить имя</span><span class="edit-pencil">✏️</span>`;
+  nameRow.onclick = startEditName;
+  if (avatarEl) {
+    avatarEl.textContent = hasName ? subscriber.name.trim()[0].toUpperCase() : subscriber.phone.replace(/\D/g, '').slice(-2);
+  }
+}
+
+function startEditName() {
+  const nameRow = document.getElementById('name-row');
+  if (!nameRow) return;
+  const currentName = subscriber.name || '';
+  nameRow.innerHTML = `<input type="text" id="name-edit-input" placeholder="Ваше имя" maxlength="40">`;
+  const input = document.getElementById('name-edit-input');
+  input.value = currentName;
+  input.focus();
+  input.select();
+  input.onblur = saveNameEdit;
+  input.onkeydown = (e) => { if (e.key === 'Enter') input.blur(); };
+}
+
+async function saveNameEdit() {
+  const input = document.getElementById('name-edit-input');
+  if (!input) return;
+  const newName = input.value.trim();
+  try {
+    await sbUpdate('vk_subscribers', `id=eq.${subscriber.id}`, { name: newName || null });
+    subscriber.name = newName || null;
+    saveLocalSubscriber(subscriber);
+  } catch (e) {
+    console.error('Не удалось сохранить имя:', e);
+  }
+  renderNameDisplay();
 }
 
 let currentSearchText = '';
