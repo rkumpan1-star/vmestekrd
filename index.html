@@ -87,7 +87,6 @@
 
   .login-wrap { padding: 60px 24px; text-align: center; }
   .login-wrap .logo { font-size: 26px; font-weight: 900; color: #0E8A86; margin-bottom: 6px; }
-  .brand-tagline { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #0E8A86; opacity: 0.7; text-align: center; margin-bottom: 22px; }
   .login-wrap .sub { font-size: 13.5px; color: #6B5A4C; margin-bottom: 30px; }
   .login-wrap input { width: 100%; padding: 15px; border-radius: 14px; border: 1.5px solid #E3D9E8; font-size: 16px; text-align: center; margin-bottom: 14px; }
   .login-wrap .hint { font-size: 11.5px; color: #B3A6BF; margin-top: 14px; }
@@ -121,6 +120,9 @@
   .stat-box .lbl { font-size: 10.5px; color: #9C8CA6; margin-top: 2px; }
 
   .section-title-profile { font-size: 12.5px; font-weight: 800; color: #6B5A4C; text-transform: uppercase; letter-spacing: 0.4px; padding: 4px 16px 8px 16px; }
+  .fav-venue-card { margin: 0 16px 16px 16px; background: #fff; border-radius: 16px; padding: 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 10px rgba(60,30,90,0.06); cursor: pointer; border: 1.5px solid #FFD7EC; }
+  .fav-label { font-size: 10px; font-weight: 800; color: #E619A6; letter-spacing: 0.4px; margin-bottom: 2px; }
+  .visit-item { cursor: pointer; }
   .visit-item { background: #fff; border-radius: 12px; padding: 12px 14px; margin: 0 16px 8px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(60,30,90,0.04); }
   .visit-item .vi-name { font-size: 13.5px; font-weight: 700; }
   .visit-item .vi-date { font-size: 11px; color: #9C8CA6; }
@@ -241,21 +243,33 @@ function renderLogin() {
   root.innerHTML = `
     <div class="view active">
       <div class="login-wrap">
-        <img src="assets/logo-dark.png" alt="Вместе, Краснодар" style="height:52px; display:block; margin:0 auto 6px auto;">
-        <div class="brand-tagline">Клуб городских привилегий</div>
+        <img src="assets/logo-dark.png" alt="Вместе, Краснодар" style="height:110px; display:block; margin:0 auto 18px auto;">
         <div class="sub">Введите номер телефона, чтобы войти или зарегистрироваться</div>
         <input type="tel" id="phone-input" placeholder="+7 900 000-00-00">
-        <button class="cta-btn" onclick="doLogin()">Продолжить</button>
+        <button class="cta-btn" id="login-btn" onclick="doLogin()">Продолжить</button>
         <div class="hint">Пилотная версия: вход только по номеру, без SMS-кода.</div>
       </div>
     </div>`;
 }
 
 
+function normalizePhone(raw) {
+  let digits = raw.replace(/\D/g, '');
+  if (digits.length === 11 && digits[0] === '8') digits = '7' + digits.slice(1);
+  if (digits.length === 10) digits = '7' + digits;
+  return digits;
+}
+
 async function doLogin() {
   const input = document.getElementById('phone-input');
-  const phone = input.value.trim();
-  if (!phone || phone.length < 10) { alert('Введите корректный номер телефона'); return; }
+  const btn = document.getElementById('login-btn');
+  const phone = normalizePhone(input.value.trim());
+  if (!phone || phone.length < 11) { alert('Введите корректный номер телефона'); return; }
+
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Подождите…';
+  btn.style.opacity = '0.6';
   try {
     let existing = await sbSelect('vk_subscribers', `phone=eq.${encodeURIComponent(phone)}`);
     let s;
@@ -270,6 +284,9 @@ async function doLogin() {
     await bootApp();
   } catch (e) {
     alert('Не удалось войти: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = originalText;
+    btn.style.opacity = '1';
   }
 }
 
@@ -363,6 +380,8 @@ function renderApp() {
       </div>
 
       <div class="stats-row" id="stats-row"></div>
+
+      <div id="favorite-venue"></div>
 
       <div class="section-title-profile">История посещений</div>
       <div id="visit-list"><div class="empty-state">Загрузка…</div></div>
@@ -598,7 +617,7 @@ function switchTab(name) {
 async function renderProfileExtras() {
   try {
     const [redemptions, payments] = await Promise.all([
-      sbSelect('vk_redemptions', `subscriber_id=eq.${subscriber.id}&select=redeemed_at,vk_partners(name)&order=redeemed_at.desc&limit=15`),
+      sbSelect('vk_redemptions', `subscriber_id=eq.${subscriber.id}&select=redeemed_at,partner_id,vk_partners(name,icon,color)&order=redeemed_at.desc&limit=15`),
       sbSelect('vk_payments', `subscriber_id=eq.${subscriber.id}&status=eq.succeeded&select=amount_rub`),
     ]);
 
@@ -624,13 +643,40 @@ async function renderProfileExtras() {
       `;
     }
 
+    // Любимое заведение — то, куда чаще всего заходили за привилегией
+    const favBox = document.getElementById('favorite-venue');
+    if (favBox) {
+      if (redemptions.length < 2) {
+        favBox.innerHTML = '';
+      } else {
+        const counts = {};
+        redemptions.forEach((r) => {
+          if (!r.partner_id) return;
+          counts[r.partner_id] = (counts[r.partner_id] || 0) + 1;
+        });
+        const topId = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+        const topRedemption = redemptions.find((r) => String(r.partner_id) === String(topId));
+        if (topRedemption && topRedemption.vk_partners) {
+          favBox.innerHTML = `
+            <div class="fav-venue-card" onclick="jumpToVenue(${topId})">
+              <div class="venue-thumb" style="background:${topRedemption.vk_partners.color || '#eee'}">${topRedemption.vk_partners.icon || '⭐'}</div>
+              <div class="venue-info">
+                <div class="fav-label">ЛЮБИМОЕ МЕСТО</div>
+                <div class="venue-name">${topRedemption.vk_partners.name}</div>
+              </div>
+              <div class="chev">›</div>
+            </div>`;
+        }
+      }
+    }
+
     const visitList = document.getElementById('visit-list');
     if (visitList) {
       if (!redemptions.length) {
         visitList.innerHTML = '<div class="empty-state">Пока нет посещений — самое время попробовать первую привилегию в каталоге!</div>';
       } else {
         visitList.innerHTML = redemptions.map((r) => `
-          <div class="visit-item">
+          <div class="visit-item" ${r.partner_id ? `onclick="jumpToVenue(${r.partner_id})"` : ''}>
             <span class="vi-name">${r.vk_partners ? r.vk_partners.name : 'Заведение'}</span>
             <span class="vi-date">${new Date(r.redeemed_at).toLocaleDateString('ru-RU')}</span>
           </div>
@@ -642,6 +688,13 @@ async function renderProfileExtras() {
     if (visitList) visitList.innerHTML = '<div class="empty-state">Не удалось загрузить историю</div>';
     console.error('Ошибка загрузки профиля:', e);
   }
+}
+
+function jumpToVenue(partnerId) {
+  const p = partners.find((x) => x.id === partnerId);
+  if (!p) return;
+  switchTab('catalog');
+  openDetail(partnerId);
 }
 
 function logout() {
