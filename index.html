@@ -97,7 +97,7 @@
   .profile-header { padding: 22px 16px 6px 16px; display: flex; align-items: center; gap: 14px; flex: none !important; height: auto !important; max-height: 100px !important; flex-shrink: 0; }
   .avatar { width: 54px; height: 54px; min-width: 54px; min-height: 54px; max-width: 54px; max-height: 54px; flex-shrink: 0; flex-grow: 0; border-radius: 50%; background: linear-gradient(135deg, #E619A6, #FFB300); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 20px; }
   .profile-header .name { font-size: 17px; font-weight: 800; }
-  .profile-header .phone { font-size: 12px; color: #9C8CA6; }
+  .profile-header .role-label { font-size: 12px; color: #9C8CA6; }
   .menu-list { padding: 6px 16px; display: flex; flex-direction: column; gap: 8px; flex: none !important; height: auto !important; }
   .menu-item { background: #fff; border-radius: 14px; padding: 14px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(60,30,90,0.05); }
   .menu-item .t { flex: 1; font-size: 14px; font-weight: 600; }
@@ -215,7 +215,6 @@ function renderLogin() {
   const root = document.getElementById('app-root');
   root.innerHTML = `
     <div class="view active">
-      <div style="background:#FF3D00; color:#fff; text-align:center; padding:10px; font-weight:900; font-size:16px;">ВЕРСИЯ: 13.09-v8</div>
       <div class="login-wrap">
         <img src="assets/logo-dark.png" alt="Вместе, Краснодар" style="height:52px; display:block; margin:0 auto 6px auto;">
         <div class="sub">Введите номер телефона, чтобы войти или зарегистрироваться</div>
@@ -253,7 +252,6 @@ function renderApp() {
   const root = document.getElementById('app-root');
   root.innerHTML = `
     <div class="statusbar"></div>
-    <div style="background:#FF3D00; color:#fff; text-align:center; padding:8px; font-weight:900; font-size:14px;">ВЕРСИЯ: 13.09-v8</div>
 
     <div class="view active" id="view-catalog">
       <div class="hero-header">
@@ -327,7 +325,7 @@ function renderApp() {
     <div class="view" id="view-profile">
       <div class="profile-header">
         <div class="avatar" id="avatar-letter">?</div>
-        <div><div class="name" id="profile-phone">-</div><div class="phone">Подписчик</div></div>
+        <div><div class="name" id="profile-phone">-</div><div class="role-label">Подписчик</div></div>
       </div>
       <div class="menu-list">
         <div class="menu-item"><span class="t">История посещений</span></div>
@@ -494,53 +492,6 @@ function switchTab(name) {
   document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
   document.querySelector(`.tab[data-tab="${name}"]`).classList.add('active');
   showView(name);
-  if (name === 'profile') setTimeout(showProfileDiagnostics, 50);
-}
-function showProfileDiagnostics() {
-  const avatar = document.getElementById('avatar-letter');
-  const header = document.querySelector('.profile-header');
-  const menuList = document.querySelector('.menu-list');
-  const viewProfile = document.getElementById('view-profile');
-  if (!avatar || !header) return;
-  const ar = avatar.getBoundingClientRect();
-  const hr = header.getBoundingClientRect();
-  const mr = menuList ? menuList.getBoundingClientRect() : null;
-  const vr = viewProfile ? viewProfile.getBoundingClientRect() : null;
-  const cs = getComputedStyle(avatar);
-
-  // Ищем ЛЮБОЙ элемент на странице, который тёмный И большой — это должно
-  // поймать тот самый чёрный прямоугольник, чем бы он ни был.
-  let suspects = [];
-  document.querySelectorAll('*').forEach((el) => {
-    if (el.id === 'diag-box') return;
-    const r = el.getBoundingClientRect();
-    if (r.width > 200 && r.height > 200) {
-      const bg = getComputedStyle(el).backgroundColor;
-      if (bg.includes('0, 0, 0') || bg === 'black') {
-        suspects.push(el.tagName + (el.id ? '#'+el.id : '') + (el.className ? '.'+String(el.className).replace(/ /g,'.') : '') + ' ' + Math.round(r.width)+'x'+Math.round(r.height) + ' @' + Math.round(r.top)+','+Math.round(r.left));
-      }
-    }
-  });
-  const canvases = document.querySelectorAll('canvas');
-
-  const msg =
-    'ДИАГНОСТИКА v2\n' +
-    'avatar rect: ' + Math.round(ar.width) + 'x' + Math.round(ar.height) + '\n' +
-    'header rect: ' + Math.round(hr.width) + 'x' + Math.round(hr.height) + '\n' +
-    'menu-list rect: ' + (mr ? Math.round(mr.width)+'x'+Math.round(mr.height) : 'НЕТ') + '\n' +
-    'view-profile rect: ' + (vr ? Math.round(vr.width)+'x'+Math.round(vr.height) : 'НЕТ') + '\n' +
-    'canvas elements on page: ' + canvases.length + '\n' +
-    'ЧЁРНЫЕ ПОДОЗРИТЕЛЬНЫЕ:\n' + (suspects.length ? suspects.join('\n') : '(не найдено)') + '\n' +
-    'window: ' + window.innerWidth + 'x' + window.innerHeight;
-
-  let box = document.getElementById('diag-box');
-  if (!box) {
-    box = document.createElement('div');
-    box.id = 'diag-box';
-    box.style.cssText = 'position:fixed; top:50px; left:10px; right:10px; background:#000; color:#0f0; font-size:10px; padding:10px; z-index:9999; white-space:pre-wrap; border-radius:8px; font-family:monospace; border:3px solid #0f0; max-height:80vh; overflow-y:auto;';
-    document.body.appendChild(box);
-  }
-  box.textContent = msg;
 }
 function logout() {
   localStorage.removeItem('vk_subscriber');
