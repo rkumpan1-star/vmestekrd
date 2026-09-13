@@ -215,6 +215,7 @@ function renderLogin() {
   const root = document.getElementById('app-root');
   root.innerHTML = `
     <div class="view active">
+      <div style="background:#FF3D00; color:#fff; text-align:center; padding:10px; font-weight:900; font-size:16px;">ВЕРСИЯ: 13.09-v8</div>
       <div class="login-wrap">
         <img src="assets/logo-dark.png" alt="Вместе, Краснодар" style="height:52px; display:block; margin:0 auto 6px auto;">
         <div class="sub">Введите номер телефона, чтобы войти или зарегистрироваться</div>
@@ -224,6 +225,7 @@ function renderLogin() {
       </div>
     </div>`;
 }
+
 
 async function doLogin() {
   const input = document.getElementById('phone-input');
@@ -251,6 +253,7 @@ function renderApp() {
   const root = document.getElementById('app-root');
   root.innerHTML = `
     <div class="statusbar"></div>
+    <div style="background:#FF3D00; color:#fff; text-align:center; padding:8px; font-weight:900; font-size:14px;">ВЕРСИЯ: 13.09-v8</div>
 
     <div class="view active" id="view-catalog">
       <div class="hero-header">
@@ -496,24 +499,45 @@ function switchTab(name) {
 function showProfileDiagnostics() {
   const avatar = document.getElementById('avatar-letter');
   const header = document.querySelector('.profile-header');
+  const menuList = document.querySelector('.menu-list');
+  const viewProfile = document.getElementById('view-profile');
   if (!avatar || !header) return;
   const ar = avatar.getBoundingClientRect();
   const hr = header.getBoundingClientRect();
+  const mr = menuList ? menuList.getBoundingClientRect() : null;
+  const vr = viewProfile ? viewProfile.getBoundingClientRect() : null;
   const cs = getComputedStyle(avatar);
+
+  // Ищем ЛЮБОЙ элемент на странице, который тёмный И большой — это должно
+  // поймать тот самый чёрный прямоугольник, чем бы он ни был.
+  let suspects = [];
+  document.querySelectorAll('*').forEach((el) => {
+    if (el.id === 'diag-box') return;
+    const r = el.getBoundingClientRect();
+    if (r.width > 200 && r.height > 200) {
+      const bg = getComputedStyle(el).backgroundColor;
+      if (bg.includes('0, 0, 0') || bg === 'black') {
+        suspects.push(el.tagName + (el.id ? '#'+el.id : '') + (el.className ? '.'+String(el.className).replace(/ /g,'.') : '') + ' ' + Math.round(r.width)+'x'+Math.round(r.height) + ' @' + Math.round(r.top)+','+Math.round(r.left));
+      }
+    }
+  });
+  const canvases = document.querySelectorAll('canvas');
+
   const msg =
-    'ДИАГНОСТИКА\n' +
+    'ДИАГНОСТИКА v2\n' +
     'avatar rect: ' + Math.round(ar.width) + 'x' + Math.round(ar.height) + '\n' +
-    'avatar computed height: ' + cs.height + '\n' +
-    'avatar computed display: ' + cs.display + '\n' +
-    'avatar computed position: ' + cs.position + '\n' +
     'header rect: ' + Math.round(hr.width) + 'x' + Math.round(hr.height) + '\n' +
-    'header computed display: ' + getComputedStyle(header).display + '\n' +
+    'menu-list rect: ' + (mr ? Math.round(mr.width)+'x'+Math.round(mr.height) : 'НЕТ') + '\n' +
+    'view-profile rect: ' + (vr ? Math.round(vr.width)+'x'+Math.round(vr.height) : 'НЕТ') + '\n' +
+    'canvas elements on page: ' + canvases.length + '\n' +
+    'ЧЁРНЫЕ ПОДОЗРИТЕЛЬНЫЕ:\n' + (suspects.length ? suspects.join('\n') : '(не найдено)') + '\n' +
     'window: ' + window.innerWidth + 'x' + window.innerHeight;
+
   let box = document.getElementById('diag-box');
   if (!box) {
     box = document.createElement('div');
     box.id = 'diag-box';
-    box.style.cssText = 'position:fixed; top:50px; left:10px; right:10px; background:#000; color:#0f0; font-size:11px; padding:10px; z-index:9999; white-space:pre-wrap; border-radius:8px; font-family:monospace;';
+    box.style.cssText = 'position:fixed; top:50px; left:10px; right:10px; background:#000; color:#0f0; font-size:10px; padding:10px; z-index:9999; white-space:pre-wrap; border-radius:8px; font-family:monospace; border:3px solid #0f0; max-height:80vh; overflow-y:auto;';
     document.body.appendChild(box);
   }
   box.textContent = msg;
