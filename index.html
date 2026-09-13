@@ -25,9 +25,12 @@
   .view.active { display: block; }
 
   .hero-header { background: linear-gradient(135deg, #0E8A86, #17B3A8); padding: 20px 20px 22px 20px; color: #fff; border-radius: 0 0 26px 26px; }
-  .hero-header .greet { font-size: 13px; opacity: 0.85; margin-bottom: 2px; }
+  .hero-header .greet { font-size: 14px; font-weight: 700; opacity: 0.95; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+  .hero-header .greet .wave { font-size: 19px; line-height: 1; }
   .hero-header h1 { font-size: 22px; font-weight: 800; margin-bottom: 14px; }
-  .search-pill { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35); border-radius: 14px; padding: 11px 14px; font-size: 14px; color: rgba(255,255,255,0.9); }
+  .search-pill { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35); border-radius: 14px; padding: 11px 14px; font-size: 14px; color: rgba(255,255,255,0.9); display: flex; align-items: center; gap: 8px; }
+  .search-pill input { flex: 1; background: none; border: none; outline: none; font-size: 14px; color: #fff; font-family: inherit; }
+  .search-pill input::placeholder { color: rgba(255,255,255,0.75); }
 
   .chips { display: flex; gap: 8px; padding: 14px 16px 6px 16px; overflow-x: auto; }
   .chip { flex-shrink: 0; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; background: #fff; color: #6B5A4C; border: 1px solid #E3D9E8; }
@@ -271,10 +274,10 @@ function renderApp() {
 
     <div class="view active" id="view-catalog">
       <div class="hero-header">
-        <img src="assets/logo-white.png" alt="Вместе, Краснодар" style="height:26px; display:block; margin-bottom:10px;">
-        <div class="greet">Привет 👋</div>
+        <img src="assets/logo-white.png" alt="Вместе, Краснодар" style="height:38px; display:block; margin:0 auto 14px auto;">
+        <div class="greet">Привет<span class="wave">👋</span></div>
         <h1>Куда сегодня?</h1>
-        <div class="search-pill">🔍 Поиск заведений и услуг</div>
+        <div class="search-pill"><span>🔍</span><input type="text" id="search-input" placeholder="Поиск заведений и услуг" oninput="onSearchInput(this.value)"></div>
       </div>
       <div class="chips" id="chips">
         <div class="chip active" data-cat="all">Все</div>
@@ -381,11 +384,32 @@ function renderApp() {
   document.getElementById('avatar-letter').textContent = subscriber.phone.replace(/\D/g, '').slice(-2);
 }
 
+let currentSearchText = '';
+
 function renderVenues(filter) {
   currentFilter = filter;
+  applyVenueFilters();
+}
+
+function onSearchInput(text) {
+  currentSearchText = text.trim().toLowerCase();
+  applyVenueFilters();
+}
+
+function applyVenueFilters() {
   const list = document.getElementById('venue-list');
   list.innerHTML = '';
-  partners.filter((p) => filter === 'all' || p.category === filter).forEach((p) => {
+  const filtered = partners.filter((p) => {
+    const matchesCat = currentFilter === 'all' || String(p.category || '').trim().toLowerCase() === currentFilter;
+    const hay = (p.name + ' ' + (p.perk || '')).toLowerCase();
+    const matchesSearch = !currentSearchText || hay.includes(currentSearchText);
+    return matchesCat && matchesSearch;
+  });
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty-state">Ничего не найдено — попробуйте другой запрос или категорию</div>';
+    return;
+  }
+  filtered.forEach((p) => {
     const el = document.createElement('div');
     el.className = 'venue-card';
     el.onclick = () => openDetail(p.id);
