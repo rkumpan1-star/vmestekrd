@@ -167,18 +167,27 @@ const PAYMENTS_LIVE = false;
 const H = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' };
 const api = (path) => `${SUPABASE_URL}/rest/v1/${path}`;
 
+// В авиарежиме/при глушении связи обычный fetch() может "висеть" по 30+ секунд,
+// прежде чем честно сообщит об ошибке. Принудительно обрываем через 4 секунды,
+// чтобы сразу перейти на сохранённую копию, а не заставлять человека ждать.
+function fetchWithTimeout(url, opts = {}, ms = 4000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 async function sbSelect(table, query = '') {
-  const res = await fetch(api(`${table}?${query}`), { headers: H });
+  const res = await fetchWithTimeout(api(`${table}?${query}`), { headers: H });
   if (!res.ok) throw new Error(`Supabase select ${table}: ${res.status}`);
   return res.json();
 }
 async function sbInsert(table, row) {
-  const res = await fetch(api(table), { method: 'POST', headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(row) });
+  const res = await fetchWithTimeout(api(table), { method: 'POST', headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(row) });
   if (!res.ok) throw new Error(`Supabase insert ${table}: ${res.status}`);
   return res.json();
 }
 async function sbUpdate(table, query, patch) {
-  const res = await fetch(api(`${table}?${query}`), { method: 'PATCH', headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(patch) });
+  const res = await fetchWithTimeout(api(`${table}?${query}`), { method: 'PATCH', headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(patch) });
   if (!res.ok) throw new Error(`Supabase update ${table}: ${res.status}`);
   return res.json();
 }
@@ -768,8 +777,7 @@ async function bootApp() {
   const root = document.getElementById('app-root');
   root.innerHTML = '<div class="loading">Загрузка…</div>';
   try {
-    await loadCatalog();
-    await loadActiveSubscription();
+    await Promise.all([loadCatalog(), loadActiveSubscription()]);
     flushRedemptionQueue(); // не ждём — просто пробуем в фоне
     renderApp();
     if (isOffline) showOfflineBadge();
