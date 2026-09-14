@@ -776,11 +776,29 @@ function logout() {
 async function bootApp() {
   const root = document.getElementById('app-root');
   root.innerHTML = '<div class="loading">Загрузка…</div>';
+
+  // Страховка поверх всего остального: что бы ни зависло внутри —
+  // через 5 секунд принудительно берём сохранённую копию и показываем её.
+  const watchdog = new Promise((resolve) => setTimeout(() => resolve('TIMEOUT'), 5000));
+  const loadPromise = Promise.all([loadCatalog(), loadActiveSubscription()]).then(() => 'OK');
+
   try {
-    await Promise.all([loadCatalog(), loadActiveSubscription()]);
-    flushRedemptionQueue(); // не ждём — просто пробуем в фоне
+    const result = await Promise.race([loadPromise, watchdog]);
+    if (result === 'TIMEOUT') {
+      const cachedPartners = cacheGet('partners');
+      const cachedPlans = cacheGet('plans');
+      if (cachedPartners && cachedPlans) {
+        partners = cachedPartners;
+        plans = cachedPlans;
+        activeSubscription = subscriber ? (cacheGet('activeSubscription_' + subscriber.id) || null) : null;
+        isOffline = true;
+      } else {
+        throw new Error('Нет сети и нет сохранённой копии');
+      }
+    }
     renderApp();
     if (isOffline) showOfflineBadge();
+    flushRedemptionQueue(); // не ждём — просто пробуем в фоне
   } catch (e) {
     root.innerHTML = `<div class="loading">Нет связи, а сохранённой копии ещё нет — откройте приложение один раз при интернете, дальше оно будет работать и без него.</div>`;
   }
