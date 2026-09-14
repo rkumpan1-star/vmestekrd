@@ -229,18 +229,71 @@ async function checkVerifyMode() {
 }
 
 /* ================= ЗАГРУЗКА ДАННЫХ ================= */
+/* ================= ОФЛАЙН-КЭШ =================
+   Сохраняем последние успешно загруженные данные на телефон.
+   Если в момент открытия приложения нет связи — используем их
+   вместо ошибки, чтобы можно было хотя бы показать QR-код. */
+function cacheSet(key, value) {
+  try { localStorage.setItem('vk_cache_' + key, JSON.stringify(value)); } catch (e) {}
+}
+function cacheGet(key) {
+  try { return JSON.parse(localStorage.getItem('vk_cache_' + key)); } catch (e) { return null; }
+}
+
+let isOffline = false;
+
 async function loadCatalog() {
-  [partners, plans] = await Promise.all([
-    sbSelect('vk_partners', 'active=eq.true&order=id.asc'),
-    sbSelect('vk_plans', 'active=eq.true&order=duration_months.asc'),
-  ]);
+  try {
+    [partners, plans] = await Promise.all([
+      sbSelect('vk_partners', 'active=eq.true&order=id.asc'),
+      sbSelect('vk_plans', 'active=eq.true&order=duration_months.asc'),
+    ]);
+    cacheSet('partners', partners);
+    cacheSet('plans', plans);
+    isOffline = false;
+  } catch (e) {
+    const cachedPartners = cacheGet('partners');
+    const cachedPlans = cacheGet('plans');
+    if (cachedPartners && cachedPlans) {
+      partners = cachedPartners;
+      plans = cachedPlans;
+      isOffline = true;
+    } else {
+      throw e; // нет ни сети, ни сохранённой копии — тогда честно ошибка
+    }
+  }
 }
 
 async function loadActiveSubscription() {
   if (!subscriber) return;
-  const rows = await sbSelect('vk_subscriptions',
-    `subscriber_id=eq.${subscriber.id}&status=eq.active&order=expires_at.desc&limit=1&select=*,vk_plans(name)`);
-  activeSubscription = rows[0] || null;
+  try {
+    const rows = await sbSelect('vk_subscriptions',
+      `subscriber_id=eq.${subscriber.id}&status=eq.active&order=expires_at.desc&limit=1&select=*,vk_plans(name)`);
+    activeSubscription = rows[0] || null;
+    cacheSet('activeSubscription_' + subscriber.id, activeSubscription);
+  } catch (e) {
+    const cached = cacheGet('activeSubscription_' + subscriber.id);
+    activeSubscription = cached || null;
+    isOffline = true;
+  }
+}
+
+/* Очередь непроведённых погашений — если QR показали без связи,
+   запись в базу отправится сама, как только связь вернётся. */
+function queueRedemption(row) {
+  const queue = cacheGet('redemption_queue') || [];
+  queue.push(row);
+  cacheSet('redemption_queue', queue);
+}
+async function flushRedemptionQueue() {
+  const queue = cacheGet('redemption_queue') || [];
+  if (!queue.length) return;
+  const remaining = [];
+  for (const row of queue) {
+    try { await sbInsert('vk_redemptions', row); }
+    catch (e) { remaining.push(row); }
+  }
+  cacheSet('redemption_queue', remaining);
 }
 
 /* ================= ВХОД ПО ТЕЛЕФОНУ (упрощённый, без SMS — см. schema.sql) ================= */
@@ -528,10 +581,12 @@ async function showRedeem() {
 
   // Уникальный токен на каждое предъявление + запись в базу
   const token = 'r_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const redemptionRow = { subscriber_id: subscriber.id, partner_id: currentVenue.id, token };
   try {
-    await sbInsert('vk_redemptions', { subscriber_id: subscriber.id, partner_id: currentVenue.id, token });
+    await sbInsert('vk_redemptions', redemptionRow);
   } catch (e) {
-    console.error('Не удалось записать погашение:', e);
+    console.error('Нет связи — сохраняю погашение локально, отправлю позже:', e);
+    queueRedemption(redemptionRow);
   }
   const qrEl = document.getElementById('qr-canvas');
   qrEl.innerHTML = '';
@@ -715,9 +770,22 @@ async function bootApp() {
   try {
     await loadCatalog();
     await loadActiveSubscription();
+    flushRedemptionQueue(); // не ждём — просто пробуем в фоне
     renderApp();
+    if (isOffline) showOfflineBadge();
   } catch (e) {
-    root.innerHTML = `<div class="loading">Ошибка загрузки: ${e.message}<br><br>Проверьте, что таблицы созданы в Supabase (schema.sql) и ключи верны.</div>`;
+    root.innerHTML = `<div class="loading">Нет связи, а сохранённой копии ещё нет — откройте приложение один раз при интернете, дальше оно будет работать и без него.</div>`;
+  }
+}
+
+function showOfflineBadge() {
+  let badge = document.getElementById('offline-badge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'offline-badge';
+    badge.style.cssText = 'position:absolute; top:calc(env(safe-area-inset-top,44px) + 6px); left:50%; transform:translateX(-50%); background:#2C2456; color:#fff; font-size:11px; font-weight:700; padding:5px 14px; border-radius:20px; z-index:60; box-shadow:0 4px 12px rgba(0,0,0,0.25);';
+    badge.textContent = 'Нет связи · показаны сохранённые данные';
+    document.querySelector('.app').appendChild(badge);
   }
 }
 
