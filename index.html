@@ -8,14 +8,11 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat+Alternates:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   input, button, textarea, select { font-family: inherit; }
-  html, body { font-family: 'Montserrat Alternates', -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #E9E3F5; height: 100%; }
+  html, body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #E9E3F5; height: 100%; }
   .screen { background: #FDFCFA !important; }
   .screen::before { content: ""; position: absolute; width: 230px; height: 210px; border-radius: 44% 56% 60% 40% / 50% 45% 55% 50%; background: linear-gradient(135deg, rgba(127,119,221,0.25), rgba(94,230,201,0.22)); top: -55px; right: -65px; pointer-events: none; z-index: 0; }
   .screen::after { content: ""; position: absolute; width: 180px; height: 170px; border-radius: 60% 40% 44% 56% / 45% 55% 45% 55%; background: linear-gradient(135deg, rgba(240,153,123,0.25), rgba(212,83,126,0.2)); bottom: 90px; left: -65px; pointer-events: none; z-index: 0; }
@@ -33,7 +30,7 @@
 
   .hero-header { background: transparent; padding: 20px 20px 14px 20px; color: #2B2438; position: relative; z-index: 1; }
   .hero-header .greet { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #7F77DD; opacity: 1; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
-  .hero-header .greet .wave { font-size: 19px; line-height: 1; }
+  .hero-header .greet .wave-icon { display: inline-flex; align-items: center; }
   .hero-header h1 { font-size: 24px; font-weight: 900; margin-bottom: 14px; background: linear-gradient(90deg, #7F77DD, #D4537E, #F0997B); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .search-pill { background: linear-gradient(135deg, #fff, #EDE9F7); border: 1px solid #fff; box-shadow: 0 4px 14px rgba(127,119,221,0.25); border-radius: 14px; padding: 11px 14px; font-size: 14px; color: #7F77DD; display: flex; align-items: center; gap: 8px; }
   .search-pill input { flex: 1; background: none; border: none; outline: none; font-size: 14px; color: #2B2438; font-family: inherit; }
@@ -45,6 +42,17 @@
 
   .section-title { font-size: 13px; font-weight: 800; color: #6B5A4C; letter-spacing: 0.5px; text-transform: uppercase; padding: 14px 16px 8px 16px; }
   .card-list { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+  .bento-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 10px; }
+  .bento-grid.has-two { grid-template-rows: 1fr; }
+  .bento-grid.has-many { grid-template-rows: 106px 106px; }
+  .bento-hero { grid-row: span 2; border-radius: 20px; padding: 14px; display: flex; flex-direction: column; justify-content: flex-end; position: relative; overflow: hidden; cursor: pointer; color: #fff; box-shadow: 0 8px 20px rgba(30,58,56,0.22); }
+  .bento-grid.has-two .bento-hero { grid-row: span 1; min-height: 140px; }
+  .bento-hero .bh-icon { position: absolute; top: 14px; right: 14px; font-size: 22px; }
+  .bento-hero .bh-name { font-size: 13px; font-weight: 700; }
+  .bento-hero .bh-perk { font-size: 10px; margin-top: 2px; opacity: 0.92; }
+  .bento-small { border-radius: 20px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; color: #fff; box-shadow: 0 6px 16px rgba(127,119,221,0.2); }
+  .bento-small .bs-icon { font-size: 18px; }
+  .bento-small .bs-name { font-size: 11px; font-weight: 700; }
   .venue-card { background: linear-gradient(135deg, #fff, #F5F2FB); border: 1px solid #fff; border-radius: 18px; padding: 12px; display: flex; gap: 12px; align-items: center; box-shadow: 0 6px 18px rgba(127,119,221,0.18); }
   .venue-thumb { width: 56px; height: 56px; min-width: 56px; min-height: 56px; max-width: 56px; max-height: 56px; border-radius: 14px; flex-shrink: 0; flex-grow: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; }
   .venue-info { flex: 1; min-width: 0; }
@@ -370,8 +378,7 @@ function renderApp() {
 
     <div class="view active" id="view-catalog">
       <div class="hero-header">
-        <img src="assets/logo-white.png" alt="Вместе, Краснодар" style="height:38px; display:block; margin:0 auto 14px auto;">
-        <div class="greet">Привет<span class="wave">👋</span></div>
+        <div class="greet">Привет<span class="wave-icon"><svg width="18" height="18" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="14" width="14" height="13" rx="6.5" fill="#8760C4"/><rect x="9.5" y="4" width="3.4" height="13" rx="1.7" fill="#8760C4" transform="rotate(-14 11.2 10.5)"/><rect x="13.3" y="2" width="3.4" height="14.5" rx="1.7" fill="#8760C4" transform="rotate(-5 15 9.25)"/><rect x="17.1" y="2" width="3.4" height="14.5" rx="1.7" fill="#8760C4" transform="rotate(5 18.8 9.25)"/><rect x="20.7" y="4.5" width="3.2" height="12.5" rx="1.6" fill="#8760C4" transform="rotate(15 22.3 10.75)"/><path d="M4.5 12.5c-1.2 1.1-1.2 3.3 0 4.4" stroke="#D4537E" stroke-width="1.4" stroke-linecap="round" fill="none"/><path d="M2 10c-2.4 2.5-2.4 7.2 0 9.7" stroke="#D4537E" stroke-width="1.4" stroke-linecap="round" fill="none" opacity="0.55"/></svg></span></div>
         <h1>Куда сегодня?</h1>
         <div class="search-pill"><span>🔍</span><input type="text" id="search-input" placeholder="Поиск заведений и услуг" oninput="onSearchInput(this.value)"></div>
       </div>
@@ -538,6 +545,12 @@ function onSearchInput(text) {
   applyVenueFilters();
 }
 
+const BENTO_FILLS = [
+  'linear-gradient(150deg, #1E3A38, #0F6E56)',
+  'linear-gradient(135deg, #D4537E, #F0997B)',
+  'linear-gradient(135deg, #7F77DD, #5EE6C9)',
+];
+
 function applyVenueFilters() {
   const list = document.getElementById('venue-list');
   list.innerHTML = '';
@@ -551,7 +564,39 @@ function applyVenueFilters() {
     list.innerHTML = '<div class="empty-state">Ничего не найдено — попробуйте другой запрос или категорию</div>';
     return;
   }
-  filtered.forEach((p) => {
+
+  const bentoCount = Math.min(3, filtered.length);
+  const bentoItems = filtered.slice(0, bentoCount);
+  const restItems = filtered.slice(bentoCount);
+
+  if (bentoCount >= 2) {
+    const grid = document.createElement('div');
+    grid.className = 'bento-grid ' + (bentoCount === 3 ? 'has-many' : 'has-two');
+
+    const hero = bentoItems[0];
+    const heroEl = document.createElement('div');
+    heroEl.className = 'bento-hero';
+    heroEl.style.background = BENTO_FILLS[0];
+    heroEl.onclick = () => openDetail(hero.id);
+    heroEl.innerHTML = `<div class="bh-icon">${hero.icon || '⭐'}</div><div class="bh-name">${hero.name}</div><div class="bh-perk">${hero.perk}</div>`;
+    grid.appendChild(heroEl);
+
+    bentoItems.slice(1).forEach((p, i) => {
+      const el = document.createElement('div');
+      el.className = 'bento-small';
+      el.style.background = BENTO_FILLS[i + 1];
+      el.onclick = () => openDetail(p.id);
+      el.innerHTML = `<div class="bs-icon">${p.icon || '⭐'}</div><div class="bs-name">${p.name}</div>`;
+      grid.appendChild(el);
+    });
+
+    list.appendChild(grid);
+  } else {
+    // Всего один результат — бенто-сетка не нужна, просто обычная карточка
+    restItems.unshift(bentoItems[0]);
+  }
+
+  restItems.forEach((p) => {
     const el = document.createElement('div');
     el.className = 'venue-card';
     el.onclick = () => openDetail(p.id);
@@ -820,9 +865,9 @@ function showOfflineBadge() {
 }
 
 (async function init() {
-  // Заставка с логотипом держится минимум 1,3 секунды при любом запуске —
+  // Заставка с логотипом держится минимум 2 секунды при любом запуске —
   // даже если данные загрузились мгновенно, бренд должен успеть промелькнуть.
-  const splashMinTime = new Promise((resolve) => setTimeout(resolve, 1300));
+  const splashMinTime = new Promise((resolve) => setTimeout(resolve, 2000));
 
   const appLogic = (async () => {
     if (await checkVerifyMode()) return;
