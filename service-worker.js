@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vmeste-krasnodar-v7';
+const CACHE_NAME = 'vmeste-krasnodar-v9';
 const ASSETS = [
   './index.html',
   './manifest.json',
