@@ -224,16 +224,54 @@ async function checkVerifyMode() {
   const token = params.get('verify');
   if (!token) return false;
 
+  const EXPIRY_MINUTES = 10; // код действителен это время с момента показа, если ещё не отсканирован
+
   const root = document.getElementById('app-root');
   root.innerHTML = '<div class="loading">Проверка…</div>';
   try {
-    const rows = await sbSelect('vk_redemptions', `token=eq.${encodeURIComponent(token)}&select=redeemed_at,vk_partners(name,perk),vk_subscribers(phone,name)`);
+    const rows = await sbSelect('vk_redemptions', `token=eq.${encodeURIComponent(token)}&select=id,redeemed_at,used_at,vk_partners(name,perk),vk_subscribers(phone,name)`);
     if (!rows.length) {
       root.innerHTML = `<div class="verify-wrap"><div class="verify-fail"><h2>Не найдено</h2><p>Такой код не зарегистрирован в системе.</p></div></div>`;
       return true;
     }
     const r = rows[0];
-    const when = new Date(r.redeemed_at).toLocaleString('ru-RU');
+    const issuedAt = new Date(r.redeemed_at);
+    const when = issuedAt.toLocaleString('ru-RU');
+
+    // Слой 1: код уже был использован раньше — показываем это честно
+    if (r.used_at) {
+      const usedWhen = new Date(r.used_at).toLocaleString('ru-RU');
+      root.innerHTML = `
+        <div class="verify-wrap">
+          <div class="verify-fail">
+            <h2>⚠ Уже использован</h2>
+            <p style="margin-top:10px; font-weight:800;">${r.vk_partners.name}</p>
+            <p style="margin-top:10px; font-size:12px; opacity:0.8;">Погашен: ${usedWhen}</p>
+          </div>
+        </div>`;
+      return true;
+    }
+
+    // Слой 2: с момента показа прошло слишком много времени — код истёк
+    const minutesPassed = (Date.now() - issuedAt.getTime()) / 60000;
+    if (minutesPassed > EXPIRY_MINUTES) {
+      root.innerHTML = `
+        <div class="verify-wrap">
+          <div class="verify-fail">
+            <h2>⏱ Код истёк</h2>
+            <p style="margin-top:10px;">Попросите гостя открыть привилегию заново в приложении</p>
+          </div>
+        </div>`;
+      return true;
+    }
+
+    // Всё в порядке — отмечаем код использованным и показываем подтверждение
+    try {
+      await sbUpdate('vk_redemptions', `id=eq.${r.id}`, { used_at: new Date().toISOString() });
+    } catch (e) {
+      console.error('Не удалось отметить код использованным:', e);
+    }
+
     root.innerHTML = `
       <div class="verify-wrap">
         <div class="verify-ok">
@@ -637,6 +675,24 @@ async function showRedeem() {
   document.getElementById('redeem-perk').textContent = currentVenue.perk;
   showView('redeem');
 
+  const qrEl = document.getElementById('qr-canvas');
+  qrEl.innerHTML = '<div class="loading">Готовим код…</div>';
+
+  // Не больше одной привилегии в этом заведении за последние 24 часа на подписчика —
+  // защита от того, чтобы наштамповать кодов и раздать их друзьям
+  try {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const recent = await sbSelect('vk_redemptions',
+      `subscriber_id=eq.${subscriber.id}&partner_id=eq.${currentVenue.id}&redeemed_at=gte.${since}&select=id&limit=1`);
+    if (recent.length) {
+      qrEl.innerHTML = '';
+      document.getElementById('redeem-perk').textContent = 'Вы уже получали эту привилегию здесь сегодня — заходите завтра';
+      return;
+    }
+  } catch (e) {
+    console.error('Не удалось проверить лимит (возможно, офлайн) — продолжаем:', e);
+  }
+
   // Уникальный токен на каждое предъявление + запись в базу
   const token = 'r_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
   const redemptionRow = { subscriber_id: subscriber.id, partner_id: currentVenue.id, token };
@@ -646,7 +702,6 @@ async function showRedeem() {
     console.error('Нет связи — сохраняю погашение локально, отправлю позже:', e);
     queueRedemption(redemptionRow);
   }
-  const qrEl = document.getElementById('qr-canvas');
   qrEl.innerHTML = '';
   const verifyUrl = `${location.origin}${location.pathname}?verify=${token}`;
   new QRCode(qrEl, { text: verifyUrl, width: 180, height: 180, colorDark: '#2C2456', colorLight: '#ffffff' });
