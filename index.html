@@ -168,16 +168,16 @@
 
 <script>
 /* ================= КОНФИГ SUPABASE ================= */
-const SUPABASE_URL = 'https://oduwgsoooeealscwuazl.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kdXdnc29vb2VlYWxzY3d1YXpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxOTI3OTUsImV4cCI6MjEwMzc2ODc5NX0.VgI5pDn-tRK3vEna3h7OXYUEKzRoPe8m1Ch7PMEAjKA';
+const SUPABASE_URL = 'https://vest-ruslan1994.amvera.io';
+const SUPABASE_ANON_KEY = ''; // не нужен для этой настройки — PostgREST здесь работает без отдельного ключа
 
 /* ================= ПЛАТЁЖНЫЙ ШЛЮЗ (заглушка до подключения ЮKassa) =================
    Когда получишь API-ключи ЮKassa — здесь появится реальный редирект
    на страницу оплаты вместо кнопки "симулировать оплату". */
 const PAYMENTS_LIVE = false;
 
-const H = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' };
-const api = (path) => `${SUPABASE_URL}/rest/v1/${path}`;
+const H = { 'Content-Type': 'application/json' };
+const api = (path) => `${SUPABASE_URL}/${path}`;
 
 // В авиарежиме/при глушении связи обычный fetch() может "висеть" по 30+ секунд,
 // прежде чем честно сообщит об ошибке. Принудительно обрываем через 4 секунды,
