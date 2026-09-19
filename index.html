@@ -416,7 +416,7 @@ function renderApp() {
 
     <div class="view active" id="view-catalog">
       <div class="hero-header">
-        <div class="greet">Привет<span class="wave-icon"><svg width="18" height="18" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="14" width="14" height="13" rx="6.5" fill="#8760C4"/><rect x="9.5" y="4" width="3.4" height="13" rx="1.7" fill="#8760C4" transform="rotate(-14 11.2 10.5)"/><rect x="13.3" y="2" width="3.4" height="14.5" rx="1.7" fill="#8760C4" transform="rotate(-5 15 9.25)"/><rect x="17.1" y="2" width="3.4" height="14.5" rx="1.7" fill="#8760C4" transform="rotate(5 18.8 9.25)"/><rect x="20.7" y="4.5" width="3.2" height="12.5" rx="1.6" fill="#8760C4" transform="rotate(15 22.3 10.75)"/><path d="M4.5 12.5c-1.2 1.1-1.2 3.3 0 4.4" stroke="#D4537E" stroke-width="1.4" stroke-linecap="round" fill="none"/><path d="M2 10c-2.4 2.5-2.4 7.2 0 9.7" stroke="#D4537E" stroke-width="1.4" stroke-linecap="round" fill="none" opacity="0.55"/></svg></span></div>
+        <div class="greet">Привет<span class="wave-icon" id="time-icon"></span></div>
         <h1>Куда сегодня?</h1>
         <div class="search-pill"><span>🔍</span><input type="text" id="search-input" placeholder="Поиск заведений и услуг" oninput="onSearchInput(this.value)"></div>
       </div>
@@ -528,6 +528,26 @@ function renderApp() {
   renderPlans();
   document.getElementById('profile-phone-sub').textContent = subscriber.phone;
   renderNameDisplay();
+  renderTimeIcon();
+}
+
+/* Значок у "Привет" меняется по времени суток: утро / день / вечер / ночь */
+function renderTimeIcon() {
+  const el = document.getElementById('time-icon');
+  if (!el) return;
+  const hour = new Date().getHours();
+  const icons = {
+    morning: `<svg width="18" height="18" viewBox="0 0 32 32"><path d="M4 20 H28" stroke="#F0C14B" stroke-width="2.4" stroke-linecap="round"/><path d="M9 20 A7 7 0 0 1 23 20 Z" fill="#F0C14B"/><g stroke="#F0C14B" stroke-width="2.2" stroke-linecap="round"><line x1="16" y1="4" x2="16" y2="9"/><line x1="6.5" y1="9.5" x2="9.5" y2="12.3"/><line x1="25.5" y1="9.5" x2="22.5" y2="12.3"/></g></svg>`,
+    day: `<svg width="18" height="18" viewBox="0 0 32 32"><circle cx="16" cy="16" r="7" fill="#F0A93A"/><g stroke="#F0A93A" stroke-width="2.2" stroke-linecap="round"><line x1="16" y1="2" x2="16" y2="6"/><line x1="16" y1="26" x2="16" y2="30"/><line x1="2" y1="16" x2="6" y2="16"/><line x1="26" y1="16" x2="30" y2="16"/><line x1="6.3" y1="6.3" x2="9.1" y2="9.1"/><line x1="22.9" y1="22.9" x2="25.7" y2="25.7"/><line x1="6.3" y1="25.7" x2="9.1" y2="22.9"/><line x1="22.9" y1="9.1" x2="25.7" y2="6.3"/></g></svg>`,
+    evening: `<svg width="18" height="18" viewBox="0 0 32 32"><path d="M4 22 H28" stroke="#D4537E" stroke-width="2.4" stroke-linecap="round"/><path d="M9 22 A7 7 0 0 1 23 22 Z" fill="#D4537E"/><g stroke="#D4537E" stroke-width="2.2" stroke-linecap="round"><line x1="6.5" y1="15" x2="9" y2="17.3"/><line x1="25.5" y1="15" x2="23" y2="17.3"/></g></svg>`,
+    night: `<svg width="18" height="18" viewBox="0 0 32 32"><path d="M21 4C15 5 11 10.5 11 17C11 23.5 16 28.5 22 29C17.5 30.5 12 29 8.5 25C4 20 4 12.5 9 7.5C12.5 4 17 3 21 4Z" fill="#7F77DD"/><circle cx="25" cy="9" r="1.4" fill="#7F77DD"/><circle cx="27" cy="15" r="1" fill="#7F77DD"/></svg>`,
+  };
+  let key = 'day';
+  if (hour >= 5 && hour < 11) key = 'morning';
+  else if (hour >= 11 && hour < 18) key = 'day';
+  else if (hour >= 18 && hour < 22) key = 'evening';
+  else key = 'night';
+  el.innerHTML = icons[key];
 }
 
 function renderNameDisplay() {
@@ -561,12 +581,15 @@ async function saveNameEdit() {
   const input = document.getElementById('name-edit-input');
   if (!input) return;
   const newName = input.value.trim();
+  // Обновляем локально сразу — чтобы экран не откатывался к пустому полю,
+  // даже если по каким-то причинам не будет связи с базой в этот момент.
+  subscriber.name = newName || null;
+  saveLocalSubscriber(subscriber);
   try {
     await sbUpdate('vk_subscribers', `id=eq.${subscriber.id}`, { name: newName || null });
-    subscriber.name = newName || null;
-    saveLocalSubscriber(subscriber);
   } catch (e) {
-    console.error('Не удалось сохранить имя:', e);
+    console.error('Не удалось сохранить имя в базу:', e);
+    alert('Имя сохранено на этом телефоне, но не удалось отправить на сервер — проверьте связь. Если открыть приложение на другом устройстве, оно может не увидеть это имя.');
   }
   renderNameDisplay();
 }
