@@ -105,6 +105,13 @@
   .login-wrap .sub { font-size: 13.5px; color: #6B5A4C; margin-bottom: 30px; }
   .login-wrap input { width: 100%; padding: 15px; border-radius: 14px; border: 1.5px solid #E0D8ED; background: linear-gradient(135deg, #fff, #F9F7FD); font-size: 16px; text-align: center; margin-bottom: 14px; }
   .login-wrap .hint { font-size: 11.5px; color: #B3A6BF; margin-top: 14px; }
+  .consent-box { text-align: left; margin-bottom: 16px; }
+  .consent-box .consent-text { font-size: 12px; color: #6B5A4C; line-height: 1.5; margin-bottom: 10px; }
+  .consent-box .consent-text a { color: #D4537E; font-weight: 700; text-decoration: none; }
+  .consent-box .consent-text a:active { opacity: 0.7; }
+  .consent-check { display: flex; align-items: flex-start; gap: 9px; cursor: pointer; }
+  .consent-check input[type="checkbox"] { width: 19px; height: 19px; min-width: 19px; margin-top: 1px; accent-color: #D4537E; cursor: pointer; }
+  .consent-check span { font-size: 12.5px; color: #2B2438; font-weight: 600; line-height: 1.4; text-align: left; }
 
   .pay-stub { padding: 24px 20px; text-align: center; }
   .pay-stub .box { background: linear-gradient(135deg, #fff, #F5F2FB); border: 1px solid #fff; border-radius: 20px; padding: 24px; box-shadow: 0 8px 24px rgba(127,119,221,0.2); }
@@ -364,12 +371,25 @@ function renderLogin() {
         <img src="assets/logo-dark.png" alt="Вместе, Краснодар" style="height:110px; display:block; margin:0 auto 18px auto;">
         <div class="sub">Введите номер телефона, чтобы войти или зарегистрироваться</div>
         <input type="tel" id="phone-input" placeholder="+7 900 000-00-00">
-        <button class="cta-btn" id="login-btn" onclick="doLogin()">Продолжить</button>
+        <div class="consent-box">
+          <div class="consent-text">Нажимая «Продолжить», вы соглашаетесь с <a href="legal/oferta.pdf" target="_blank" rel="noopener">условиями предоставления сервиса</a> и даёте согласие на <a href="legal/politika_pd.pdf" target="_blank" rel="noopener">обработку персональных данных</a></div>
+          <label class="consent-check">
+            <input type="checkbox" id="consent-checkbox" onchange="updateLoginButton()">
+            <span>Я соглашаюсь с условиями и положениями</span>
+          </label>
+        </div>
+        <button class="cta-btn" id="login-btn" onclick="doLogin()" disabled>Продолжить</button>
         <div class="hint">Пилотная версия: вход только по номеру, без SMS-кода.</div>
       </div>
     </div>`;
 }
 
+
+function updateLoginButton() {
+  const checkbox = document.getElementById('consent-checkbox');
+  const btn = document.getElementById('login-btn');
+  if (checkbox && btn) btn.disabled = !checkbox.checked;
+}
 
 function normalizePhone(raw) {
   let digits = raw.replace(/\D/g, '');
@@ -381,6 +401,8 @@ function normalizePhone(raw) {
 async function doLogin() {
   const input = document.getElementById('phone-input');
   const btn = document.getElementById('login-btn');
+  const consent = document.getElementById('consent-checkbox');
+  if (!consent || !consent.checked) { alert('Нужно подтвердить согласие с условиями предоставления сервиса и обработкой персональных данных'); return; }
   const phone = normalizePhone(input.value.trim());
   if (!phone || phone.length < 11) { alert('Введите корректный номер телефона'); return; }
 
