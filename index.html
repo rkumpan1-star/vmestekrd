@@ -47,14 +47,15 @@
   .bento-grid.has-many { grid-template-rows: 106px 106px; }
   .bento-hero { grid-row: span 2; border-radius: 20px; padding: 14px; display: flex; flex-direction: column; justify-content: flex-end; position: relative; overflow: hidden; cursor: pointer; color: #fff; box-shadow: 0 8px 20px rgba(30,58,56,0.22); }
   .bento-grid.has-two .bento-hero { grid-row: span 1; min-height: 140px; }
-  .bento-hero .bh-icon { position: absolute; top: 14px; right: 14px; font-size: 22px; }
-  .bento-hero .bh-name { font-size: 13px; font-weight: 700; }
-  .bento-hero .bh-perk { font-size: 10px; margin-top: 2px; opacity: 0.92; }
-  .bento-small { border-radius: 20px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; color: #fff; box-shadow: 0 6px 16px rgba(127,119,221,0.2); }
-  .bento-small .bs-icon { font-size: 18px; }
-  .bento-small .bs-name { font-size: 11px; font-weight: 700; }
+  .bento-hero .bh-icon { position: absolute; top: 14px; right: 14px; font-size: 22px; z-index: 2; }
+  .bento-hero .bh-name { font-size: 13px; font-weight: 700; position: relative; z-index: 2; }
+  .bento-hero .bh-perk { font-size: 10px; margin-top: 2px; opacity: 0.92; position: relative; z-index: 2; }
+  .bh-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20,15,25,0) 35%, rgba(20,15,25,0.6) 100%); z-index: 1; }
+  .bento-small { border-radius: 20px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; color: #fff; box-shadow: 0 6px 16px rgba(127,119,221,0.2); position: relative; overflow: hidden; }
+  .bento-small .bs-icon { font-size: 18px; position: relative; z-index: 2; }
+  .bento-small .bs-name { font-size: 11px; font-weight: 700; position: relative; z-index: 2; }
   .venue-card { background: linear-gradient(135deg, #fff, #F5F2FB); border: 1px solid #fff; border-radius: 18px; padding: 12px; display: flex; gap: 12px; align-items: center; box-shadow: 0 6px 18px rgba(127,119,221,0.18); }
-  .venue-thumb { width: 56px; height: 56px; min-width: 56px; min-height: 56px; max-width: 56px; max-height: 56px; border-radius: 14px; flex-shrink: 0; flex-grow: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+  .venue-thumb { width: 56px; height: 56px; min-width: 56px; min-height: 56px; max-width: 56px; max-height: 56px; border-radius: 14px; flex-shrink: 0; flex-grow: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; background-size: cover; background-position: center; overflow: hidden; }
   .venue-info { flex: 1; min-width: 0; }
   .venue-name { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
   .venue-cat { font-size: 11.5px; color: #9C8CA6; margin-bottom: 4px; }
@@ -66,9 +67,12 @@
   .tab .ic { font-size: 21px; }
   .tab.active { color: #7F77DD; }
 
-  .detail-hero { height: 190px; display: flex; align-items: flex-end; padding: 18px; position: relative; }
+  .detail-hero { height: 190px; display: flex; align-items: flex-end; padding: 18px; position: relative; overflow: hidden; }
+  .detail-hero.has-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20,15,25,0) 40%, rgba(20,15,25,0.62) 100%); z-index: 1; }
   .back-btn { position: absolute; top: 18px; left: 16px; width: 34px; height: 34px; border-radius: 50%; background: rgba(0,0,0,0.28); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; z-index: 5; }
-  .detail-hero h2 { color: #fff; font-size: 22px; font-weight: 800; position: relative; z-index: 2; }
+  .detail-hero-row { display: flex; align-items: center; gap: 10px; position: relative; z-index: 2; }
+  .detail-hero-logo { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.9); box-shadow: 0 4px 12px rgba(0,0,0,0.28); flex-shrink: 0; background: #fff; }
+  .detail-hero h2 { color: #fff; font-size: 22px; font-weight: 800; position: relative; z-index: 2; margin: 0; }
   .detail-body { padding: 18px; }
   .perk-box { background: linear-gradient(135deg, #fff, #F5F2FB); border: 1px solid #fff; border-radius: 18px; padding: 16px; margin-bottom: 14px; box-shadow: 0 6px 18px rgba(127,119,221,0.18); }
   .perk-box .lbl { font-size: 11.5px; color: #9C8CA6; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; margin-bottom: 4px; }
@@ -456,7 +460,10 @@ function renderApp() {
     <div class="view" id="view-detail">
       <div class="detail-hero" id="detail-hero-bg" style="background:linear-gradient(135deg,#7F77DD,#D4537E);">
         <div class="back-btn" onclick="showView('catalog')">←</div>
-        <h2 id="detail-name">Название</h2>
+        <div class="detail-hero-row">
+          <img id="detail-hero-logo" class="detail-hero-logo" style="display:none;" alt="">
+          <h2 id="detail-name">Название</h2>
+        </div>
       </div>
       <div class="detail-body">
         <div class="perk-box"><div class="lbl">Ваша привилегия</div><div class="val" id="detail-perk">-</div></div>
@@ -659,17 +666,21 @@ function applyVenueFilters() {
     const hero = bentoItems[0];
     const heroEl = document.createElement('div');
     heroEl.className = 'bento-hero';
-    heroEl.style.background = BENTO_FILLS[0];
+    heroEl.style.background = hero.photo_url
+      ? `center/cover no-repeat url('${hero.photo_url}'), ${BENTO_FILLS[0]}`
+      : BENTO_FILLS[0];
     heroEl.onclick = () => openDetail(hero.id);
-    heroEl.innerHTML = `<div class="bh-icon">${hero.icon || '⭐'}</div><div class="bh-name">${hero.name}</div><div class="bh-perk">${hero.perk}</div>`;
+    heroEl.innerHTML = `${hero.photo_url ? '<div class="bh-scrim"></div>' : ''}<div class="bh-icon">${hero.photo_url ? '' : (hero.icon || '⭐')}</div><div class="bh-name">${hero.name}</div><div class="bh-perk">${hero.perk}</div>`;
     grid.appendChild(heroEl);
 
     bentoItems.slice(1).forEach((p, i) => {
       const el = document.createElement('div');
       el.className = 'bento-small';
-      el.style.background = BENTO_FILLS[i + 1];
+      el.style.background = p.photo_url
+        ? `center/cover no-repeat url('${p.photo_url}'), ${BENTO_FILLS[i + 1]}`
+        : BENTO_FILLS[i + 1];
       el.onclick = () => openDetail(p.id);
-      el.innerHTML = `<div class="bs-icon">${p.icon || '⭐'}</div><div class="bs-name">${p.name}</div>`;
+      el.innerHTML = `${p.photo_url ? '<div class="bh-scrim"></div>' : ''}<div class="bs-icon">${p.photo_url ? '' : (p.icon || '⭐')}</div><div class="bs-name">${p.name}</div>`;
       grid.appendChild(el);
     });
 
@@ -683,8 +694,11 @@ function applyVenueFilters() {
     const el = document.createElement('div');
     el.className = 'venue-card';
     el.onclick = () => openDetail(p.id);
+    const thumbStyle = p.photo_url
+      ? `background-image:url('${p.photo_url}')`
+      : `background:${p.color || '#eee'}`;
     el.innerHTML = `
-      <div class="venue-thumb" style="background:${p.color || '#eee'}">${p.icon || '⭐'}</div>
+      <div class="venue-thumb" style="${thumbStyle}">${p.photo_url ? '' : (p.icon || '⭐')}</div>
       <div class="venue-info">
         <div class="venue-name">${p.name}</div>
         <div class="venue-cat">${catLabel(p.category)}</div>
@@ -703,6 +717,23 @@ function openDetail(id) {
   document.getElementById('detail-cat').textContent = catLabel(currentVenue.category);
   document.getElementById('detail-addr').textContent = currentVenue.address || '-';
   document.getElementById('detail-hours').textContent = currentVenue.hours || '-';
+
+  const heroBg = document.getElementById('detail-hero-bg');
+  const heroLogo = document.getElementById('detail-hero-logo');
+  if (currentVenue.photo_url) {
+    heroBg.style.background = `center/cover no-repeat url('${currentVenue.photo_url}')`;
+    heroBg.classList.add('has-photo');
+  } else {
+    heroBg.style.background = 'linear-gradient(135deg,#7F77DD,#D4537E)';
+    heroBg.classList.remove('has-photo');
+  }
+  if (currentVenue.logo_url) {
+    heroLogo.src = currentVenue.logo_url;
+    heroLogo.style.display = 'block';
+  } else {
+    heroLogo.style.display = 'none';
+  }
+
   const btn = document.getElementById('detail-redeem-btn');
   if (!activeSubscription) {
     btn.textContent = 'Нужна активная подписка';
